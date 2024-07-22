@@ -1,7 +1,4 @@
 /build
-/3rd party
 /bin
 /.vscode
-/model/*
-!/model/iiwa14/iiwa14.urdf
-!/model/iiwa14/world.urdf
+
