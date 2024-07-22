@@ -103,7 +103,7 @@ int main() {
 	// set initial position.
 	// VectorXd q_init = VectorXd(0.01, 1.02, -0.7, 1.57, -0.35, 1.3, 3.2);
 	VectorXd q_init(7);
-	q_init << 0.01, 1.02, -0.7, 1.57, -0.35, 1.3, 3.2;
+	q_init << 1.01, -1.02, 1.7, 1.57, -0.35, 1.3, 1.03;
 	robot->_q = q_init;
 	robot->updateKinematics();
 	cout << "q: " <<robot->_q << "\n";
@@ -113,6 +113,7 @@ int main() {
 	sim->setCollisionRestitution(0);
 	sim->setCoeffFrictionStatic(0.4);
 	sim->setCoeffFrictionDynamic(0.02);
+	sim->setJointPositions(robot_name,q_init); // set q_init as the default pose.
 
 	// read joint positions, velocities, update model
 	sim->getJointPositions(robot_name, robot->_q);
