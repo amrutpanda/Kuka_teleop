@@ -70,7 +70,7 @@ int main(int argc, char const *argv[])
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.Fonts->AddFontFromFileTTF("./fonts/SpaceMono-Regular.ttf",25.0f);
+    io.Fonts->AddFontFromFileTTF("./fonts/Space_Mono/SpaceMono-Regular.ttf",25.0f);
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
