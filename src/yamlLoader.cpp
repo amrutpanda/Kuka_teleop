@@ -23,51 +23,50 @@ float yamlLoader::getKv() {
     return tnode["kv"].as<float>();
 }
 
-Eigen::VectorXd yamlLoader::get_qinit(int matRows = 0 , int matCols = 1) {
+Eigen::VectorXd yamlLoader::get_qinit() {
     // matRows 0 means the matrix is vector only.
     std::string exp = mainNode["robot"]["q_init"].as<std::string>();
-    // parse the string and store it inside a vector for further processing.
-    std::vector<std::string> container;
+    std::vector<double> values;
     // create a stringstream.
     std::stringstream ss(exp);
     while (ss.good())
     {
         std::string substr;
         getline(ss,substr,',');
-        container.push_back(substr);
-    }
+        values.push_back(std::stod(substr));
 
-    Eigen::VectorXd v(container.size());
-    for (int i = 0; i < container.size(); i++)
-    {
-        v(i) = std::stod(container[i]);
     }
+    Eigen::VectorXd v(Eigen::Map<Eigen::VectorXd>(values.data(),values.size()));
     return v;
       
 }
 
 void yamlLoader::strToEigen(std::string& str, char delimiter, Eigen::MatrixXd& mat ) {
     std::vector<std::string> container;
+    std::vector<double> values;
     // create a stringstream.
     std::stringstream ss(str);
     while (ss.good())
     {
         std::string substr;
         getline(ss,substr,delimiter);
-        container.push_back(substr);
+        // container.push_back(substr);
+        values.push_back(std::stod(substr));
+
     }
 
-    int count = 0;
-    assert(("mismatch between matrix size and no. of delimiters\n" ,(mat.rows()*mat.cols()) == container.size()));
-    for (int i = 0; i < mat.rows(); i++)
-    {
-        for (int j = 0; j < mat.cols(); j++)
-        {
-            mat(i,j) = std::stod(container[count]);
-            count += 1;
-        }
+    // int count = 0;
+    assert(("mismatch between matrix size and no. of delimiters\n" ,(mat.rows()*mat.cols()) == values.size()));
+    mat = Eigen::Map<Eigen::MatrixXd>(values.data(),mat.rows(),mat.cols());
+    // for (int i = 0; i < mat.rows(); i++)
+    // {
+    //     for (int j = 0; j < mat.cols(); j++)
+    //     {
+    //         mat(i,j) = std::stod(container[count]);
+    //         count += 1;
+    //     }
         
-    }
+    // }
 
 }
 

@@ -18,7 +18,7 @@ public:
     std::string getRobotFilename();
     float getKp();
     float getKv();
-    Eigen::VectorXd get_qinit(int matRows, int matCols);
+    Eigen::VectorXd get_qinit();
     ~yamlLoader();
 };
 
