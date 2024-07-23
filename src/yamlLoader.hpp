@@ -12,6 +12,7 @@ private:
     YAML::Node mainNode;
     YAML::Node childNode;
     void strToEigen(std::string& str, char delimiter ,Eigen::MatrixXd& mat);
+    void strToEigenVector(std::string& str, char delimiter ,Eigen::VectorXd& v);
 public:
     yamlLoader(const std::string FilePath );
     std::string getWorldFilename();
@@ -19,6 +20,7 @@ public:
     float getKp();
     float getKv();
     Eigen::VectorXd get_qinit();
+    Eigen::MatrixXd get_rinit();
     ~yamlLoader();
 };
 

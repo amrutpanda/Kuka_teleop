@@ -24,7 +24,6 @@ float yamlLoader::getKv() {
 }
 
 Eigen::VectorXd yamlLoader::get_qinit() {
-    // matRows 0 means the matrix is vector only.
     std::string exp = mainNode["robot"]["q_init"].as<std::string>();
     std::vector<double> values;
     // create a stringstream.
@@ -52,7 +51,6 @@ void yamlLoader::strToEigen(std::string& str, char delimiter, Eigen::MatrixXd& m
         getline(ss,substr,delimiter);
         // container.push_back(substr);
         values.push_back(std::stod(substr));
-
     }
 
     // int count = 0;
@@ -70,19 +68,35 @@ void yamlLoader::strToEigen(std::string& str, char delimiter, Eigen::MatrixXd& m
 
 }
 
+void yamlLoader::strToEigenVector(std::string& str, char delimiter ,Eigen::VectorXd& v) {
+    std::vector<double> values;
+    // create a stringstream.
+    std::stringstream ss(str);
+    while (ss.good())
+    {
+        std::string substr;
+        getline(ss,substr,',');
+        values.push_back(std::stod(substr));
+
+    }
+    // Eigen::VectorXd v(Eigen::Map<Eigen::VectorXd>(values.data(),values.size()));
+    v = Eigen::Map<Eigen::VectorXd>(values.data(),values.size());
+}
+
 yamlLoader::~yamlLoader()
 {
+
 }
 
 
 
-int main(int argc, char const *argv[])
-{
-    yamlLoader loader("../src/config.yaml");
-    Eigen::VectorXd vec;
-    std::cout << loader.getRobotFilename() << "\n";
-    vec = loader.get_qinit();
-    std::cout << vec << "\n";
+// int main(int argc, char const *argv[])
+// {
+//     yamlLoader loader("../src/config.yaml");
+//     Eigen::VectorXd vec;
+//     std::cout << loader.getRobotFilename() << "\n";
+//     vec = loader.get_qinit();
+//     std::cout << vec << "\n";
 
-    return 0;
-}
+//     return 0;
+// }

@@ -9,6 +9,8 @@
 #include "redis/RedisClient.h"
 #include "timer/LoopTimer.h"
 
+#include "yamlLoader.hpp" // yamlLoader loader include file.
+
 #include <GLFW/glfw3.h> //must be loaded after loading opengl/glew
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -88,6 +90,8 @@ int main() {
 	signal(SIGABRT, &sighandler);
 	signal(SIGTERM, &sighandler);
 	signal(SIGINT, &sighandler);
+	// load config file.
+	yamlLoader robotconfig("../src/config.yaml");
 	
 	// load graphics scene
 	auto graphics = new Sai2Graphics::Sai2Graphics(world_file, true);
@@ -103,7 +107,8 @@ int main() {
 	// set initial position.
 	// VectorXd q_init = VectorXd(0.01, 1.02, -0.7, 1.57, -0.35, 1.3, 3.2);
 	VectorXd q_init(7);
-	q_init << 1.01, -1.02, 1.7, 1.57, -0.35, 1.3, 1.03;
+	// q_init << 1.01, -1.02, 1.7, 1.57, -0.35, 1.3, 1.03;
+	q_init = robotconfig.get_qinit();
 	robot->_q = q_init;
 	robot->updateKinematics();
 	cout << "q: " <<robot->_q << "\n";

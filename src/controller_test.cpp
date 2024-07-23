@@ -9,6 +9,8 @@
 #include <fstream>
 #include <string>
 
+#include "yamlLoader.hpp"
+
 #define RAD(deg) ((double)(deg) * M_PI / 180.0)
 
 // handle ctrl-c nicely
@@ -56,6 +58,8 @@ int main(int argc, char const *argv[])
 	signal(SIGTERM, &sighandler);
 	signal(SIGINT, &sighandler);
 
+	// load the yaml config file.
+	yamlLoader robotconfig("../src/config.yaml");
 	// load robots
 	auto robot = new Sai2Model::Sai2Model(robot_file, false);
 	robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
