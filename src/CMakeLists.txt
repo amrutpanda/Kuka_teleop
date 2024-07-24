@@ -14,3 +14,5 @@ target_link_libraries(viewdata yamlLoader ${KUKA_TELEOP_COMMON_LIBRARIES} ${Open
 
 # add_executable(yamlLoader yamlLoader.cpp)
 # target_link_libraries(yamlLoader ${KUKA_TELEOP_COMMON_LIBRARIES})
+
+# add_executable(eigen_test eigen_test.cpp)

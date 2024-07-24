@@ -15,12 +15,46 @@ std::string yamlLoader::getRobotFilename() {
 
 float yamlLoader::getKp() {
     YAML::Node tnode = mainNode["robot"];
-    return childNode["kp"].as<float>();
+    return tnode["kp"].as<float>();
 }
 
 float yamlLoader::getKv() {
     YAML::Node tnode = mainNode["robot"];
     return tnode["kv"].as<float>();
+}
+
+Eigen::VectorXd yamlLoader::get_qlower() {
+    std::string exp = mainNode["robot"]["q_lower"].as<std::string>();
+    std::vector<double> values;
+    // create a stringstream.
+    std::stringstream ss(exp);
+    while (ss.good())
+    {
+        std::string substr;
+        getline(ss,substr,',');
+        values.push_back(std::stod(substr));
+
+    }
+    Eigen::VectorXd v(Eigen::Map<Eigen::VectorXd>(values.data(),values.size()));
+    return v;
+      
+}
+
+Eigen::VectorXd yamlLoader::get_qupper() {
+    std::string exp = mainNode["robot"]["q_upper"].as<std::string>();
+    std::vector<double> values;
+    // create a stringstream.
+    std::stringstream ss(exp);
+    while (ss.good())
+    {
+        std::string substr;
+        getline(ss,substr,',');
+        values.push_back(std::stod(substr));
+
+    }
+    Eigen::VectorXd v(Eigen::Map<Eigen::VectorXd>(values.data(),values.size()));
+    return v;
+      
 }
 
 Eigen::VectorXd yamlLoader::get_qinit() {
@@ -41,7 +75,6 @@ Eigen::VectorXd yamlLoader::get_qinit() {
 }
 
 void yamlLoader::strToEigen(std::string& str, char delimiter, Eigen::MatrixXd& mat ) {
-    std::vector<std::string> container;
     std::vector<double> values;
     // create a stringstream.
     std::stringstream ss(str);
@@ -49,22 +82,11 @@ void yamlLoader::strToEigen(std::string& str, char delimiter, Eigen::MatrixXd& m
     {
         std::string substr;
         getline(ss,substr,delimiter);
-        // container.push_back(substr);
         values.push_back(std::stod(substr));
     }
 
-    // int count = 0;
     assert(("mismatch between matrix size and no. of delimiters\n" ,(mat.rows()*mat.cols()) == values.size()));
     mat = Eigen::Map<Eigen::MatrixXd>(values.data(),mat.rows(),mat.cols());
-    // for (int i = 0; i < mat.rows(); i++)
-    // {
-    //     for (int j = 0; j < mat.cols(); j++)
-    //     {
-    //         mat(i,j) = std::stod(container[count]);
-    //         count += 1;
-    //     }
-        
-    // }
 
 }
 

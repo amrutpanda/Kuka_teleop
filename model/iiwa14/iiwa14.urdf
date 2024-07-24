@@ -19,12 +19,19 @@
         </material>
       </visual>
 
-<!--       <collision>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <geometry>st
-          <mesh filename="../../../model/iiwa14/meshes/collision/link_0.obj"/>
-        </geometry>
-      </collision> -->
+<!--       <collision>-->
+<!--        <origin xyz="0 0 0" rpy="0 0 0"/>-->
+<!--        <geometry>st-->
+<!--          <mesh filename="./meshes/collision/link_0.obj"/>-->
+<!--        </geometry>-->
+<!--      </collision> -->-->
+      
+<!--      <collision>-->
+<!--        <origin xyz="0 0 0" rpy="0 0 0"/>-->
+<!--        <geometry>-->
+<!--          <mesh filename="./meshes/collision/link_0.stl"/>-->
+<!--        </geometry>-->
+<!--      </collision> -->
     </link>
 
 

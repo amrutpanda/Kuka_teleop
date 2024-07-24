@@ -293,33 +293,29 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim, Sa
 
 	while (fSimulationRunning) {
 		fTimerDidSleep = timer.waitForNextLoop();
-
-		if(redis_client.get(CONTROLLER_RUNNING_KEY) == "1")
-		{
-			gravity.setZero();
-			robot->gravityVector(gravity);
-		}
-		else
-		{
-			robot->gravityVector(gravity);
-		}
+		robot->gravityVector(gravity);
 
 		// read arm torques from redis
 		command_torques = redis_client.getEigenMatrixJSON(ROBOT_COMMAND_TORQUES_KEY);
 
-		// set torques to simulation
-		sim->setJointTorques(robot_name, command_torques + gravity);
-		// sim->setJointTorques(robot_name,command_torques);
+		// if (redis_client.get(CONTROLLER_RUNNING_KEY) == "1"){
+		// 	// set torques to simulation
+		// 	sim->setJointTorques(robot_name, command_torques + gravity);
+		// 	// sim->setJointTorques(robot_name,command_torques);
+		// 	// integrate forward
+		// 	// double curr_time = timer.elapsedTime();
+		// 	// double loop_dt = curr_time - last_time; 
+		// 	sim->integrate(0.001);
+		// }
 
-		// integrate forward
-		// double curr_time = timer.elapsedTime();
-		// double loop_dt = curr_time - last_time; 
+		sim->setJointTorques(robot_name,command_torques+gravity);
 		sim->integrate(0.001);
 
 		// read joint positions, velocities, update model
 		sim->getJointPositions(robot_name, robot->_q);
 		sim->getJointVelocities(robot_name, robot->_dq);
 		robot->updateKinematics();
+		robot->updateModel();
 
 		// get ee_pose.
 		Vector3d robot_pos;

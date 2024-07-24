@@ -19,6 +19,8 @@ public:
     std::string getRobotFilename();
     float getKp();
     float getKv();
+    Eigen::VectorXd get_qlower();
+    Eigen::VectorXd get_qupper();
     Eigen::VectorXd get_qinit();
     Eigen::MatrixXd get_rinit();
     ~yamlLoader();
