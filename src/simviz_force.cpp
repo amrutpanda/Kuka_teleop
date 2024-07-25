@@ -31,7 +31,7 @@ const string robot_file = "../model/iiwa14/iiwa14.urdf";
 const string robot_name = "iiwa";
 const string camera_name = "camera_fixed";
 
-int loopFreq = 1000;
+int loopFreq = 100;
 
 // redis keys:
 // - write:
@@ -109,16 +109,22 @@ int main() {
 	VectorXd q_init(7);
 	// q_init << 1.01, -1.02, 1.7, 1.57, -0.35, 1.3, 1.03;
 	q_init = robotconfig.get_qinit();
-	robot->_q = q_init;
-	robot->updateKinematics();
-	cout << "q: " <<robot->_q << "\n";
+	// robot->_q = q_init;
+	// robot->updateKinematics();
+	// cout << "q: " <<robot->_q << "\n";
 
 	// load simulation world
 	auto sim = new Simulation::Sai2Simulation(world_file, false);
 	sim->setCollisionRestitution(0);
 	sim->setCoeffFrictionStatic(0.4);
 	sim->setCoeffFrictionDynamic(0.02);
+
+	// sim->setCollisionRestitution(0.5);
+	// sim->setCoeffFrictionStatic(0.4);
+	// sim->setCoeffFrictionDynamic(0.4);
+
 	sim->setJointPositions(robot_name,q_init); // set q_init as the default pose.
+	// sim->setJointVelocities(robot_name,VectorXd::Zero(7));
 
 	// read joint positions, velocities, update model
 	sim->getJointPositions(robot_name, robot->_q);
@@ -293,35 +299,35 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim, Sa
 
 	while (fSimulationRunning) {
 		fTimerDidSleep = timer.waitForNextLoop();
-		robot->gravityVector(gravity);
 
+		if (redis_client.get(CONTROLLER_RUNNING_KEY) == "1"){
+			gravity.setZero();
+		}
+		else {
+			// cout << "command torques + gravity : \n" << command_torques + gravity << "\n";
+			robot->gravityVector(gravity);
+			// robot->coriolisPlusGravity(gravity);
+		}
 		// read arm torques from redis
 		command_torques = redis_client.getEigenMatrixJSON(ROBOT_COMMAND_TORQUES_KEY);
 
-		// if (redis_client.get(CONTROLLER_RUNNING_KEY) == "1"){
-		// 	// set torques to simulation
-		// 	sim->setJointTorques(robot_name, command_torques + gravity);
-		// 	// sim->setJointTorques(robot_name,command_torques);
-		// 	// integrate forward
-		// 	// double curr_time = timer.elapsedTime();
-		// 	// double loop_dt = curr_time - last_time; 
-		// 	sim->integrate(0.001);
-		// }
+		cout << "command torques: \n" << command_torques << "\n";
 
-		sim->setJointTorques(robot_name,command_torques+gravity);
-		sim->integrate(0.001);
+		sim->setJointTorques(robot_name,command_torques + gravity);
+		sim->integrate(0.01);
+
 
 		// read joint positions, velocities, update model
 		sim->getJointPositions(robot_name, robot->_q);
 		sim->getJointVelocities(robot_name, robot->_dq);
 		robot->updateKinematics();
-		robot->updateModel();
+		// robot->updateModel();
 
 		// get ee_pose.
-		Vector3d robot_pos;
-		Matrix3d robot_ori;
-		robot->position(robot_pos,"link7",Vector3d(0, 0, 0.0815));
-		robot->rotation(robot_ori,"link7");
+		// Vector3d robot_pos;
+		// Matrix3d robot_ori;
+		// robot->position(robot_pos,"link7",Vector3d(0, 0, 0.0815));
+		// robot->rotation(robot_ori,"link7");
 		// update force sensor and display
 		force_sensor->update(sim);
 		force_sensor->getForce(force);
@@ -334,8 +340,8 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim, Sa
 		redis_client.setEigenMatrixJSON(EE_FORCE_KEY, force);
 		redis_client.setEigenMatrixJSON(EE_MOMENT_KEY, moment);
 
-		redis_client.setEigenMatrixJSON(EE_POSE,robot_pos);
-		redis_client.setEigenMatrixJSON(EE_ORIENTATION,robot_ori);
+		// redis_client.setEigenMatrixJSON(EE_POSE,robot_pos);
+		// redis_client.setEigenMatrixJSON(EE_ORIENTATION,robot_ori);
 
 		//update last time
 		// last_time = curr_time;
