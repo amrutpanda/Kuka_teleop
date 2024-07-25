@@ -75,6 +75,7 @@ Eigen::VectorXd yamlLoader::get_qinit() {
 }
 
 void yamlLoader::strToEigen(std::string& str, char delimiter, Eigen::MatrixXd& mat ) {
+    // the matrix "mat" must have its rows and columns defined.
     std::vector<double> values;
     // create a stringstream.
     std::stringstream ss(str);
@@ -102,7 +103,22 @@ void yamlLoader::strToEigenVector(std::string& str, char delimiter ,Eigen::Vecto
 
     }
     // Eigen::VectorXd v(Eigen::Map<Eigen::VectorXd>(values.data(),values.size()));
+    v.resize(values.size());
     v = Eigen::Map<Eigen::VectorXd>(values.data(),values.size());
+}
+
+Eigen::VectorXd yamlLoader::getKpV() {
+    std::string exp = mainNode["robot"]["kp_vector"].as<std::string>();
+    Eigen::VectorXd v;
+    strToEigenVector(exp,',',v);
+    return v;
+}
+
+Eigen::VectorXd yamlLoader::getKvV() {
+    std::string exp = mainNode["robot"]["kv_vector"].as<std::string>();
+    Eigen::VectorXd v;
+    strToEigenVector(exp,',',v);
+    return v;
 }
 
 yamlLoader::~yamlLoader()

@@ -18,6 +18,8 @@ public:
     std::string getWorldFilename();
     std::string getRobotFilename();
     float getKp();
+    Eigen::VectorXd getKpV();
+    Eigen::VectorXd getKvV();
     float getKv();
     Eigen::VectorXd get_qlower();
     Eigen::VectorXd get_qupper();

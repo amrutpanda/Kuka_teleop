@@ -99,6 +99,9 @@ int main(int argc, char const *argv[])
     }
     controller_number = argv[1];
 
+	VectorXd Kp(dof),Kv(dof);
+	Kp = robotconfig.getKpV();
+	Kv = robotconfig.getKvV();
 	// create a timer
 	LoopTimer timer;
 	timer.initializeTimer();
@@ -121,7 +124,9 @@ int main(int argc, char const *argv[])
         if(controller_number == "1")
 		{
 			Vector3d x, x_d, dx, F;
-			VectorXd g(dof), joint_task_torque(dof);
+			VectorXd g(dof), joint_task_torque(dof), qd(dof);
+
+			qd << 0, -0.236, 0.1, -1.57, 0, 1.57, 0.0;
 
 			double kp = 100;
 			double kv = 20;
@@ -162,7 +167,7 @@ int main(int argc, char const *argv[])
 			// calculate command_torques
 			// command_torques.setZero();
 			// command_torques = Jv.transpose()*F + N.transpose()* ( - kpj*(robot->_q) - kvj*(robot->_dq) ) + g;
-			command_torques = Jv.transpose()*F + h;
+			command_torques = robot->_M_inv*(-kp *(robot->_q - qd) - kv*(robot->_dq)) + h;
 			cout << "command torque: " << command_torques << "\n";
 
 		}
@@ -171,7 +176,7 @@ int main(int argc, char const *argv[])
 			VectorXd g(dof), joint_task_torque(dof), qd(dof);
 
 			qd << 0.2, -0.236, 0.1, -1.57, 0.03, 1.57, 0.0;
-	
+
 			double kp = robotconfig.getKp();
 			double kv = robotconfig.getKv();
 			double kpj = 50;
@@ -206,14 +211,17 @@ int main(int argc, char const *argv[])
 			// calculate F
 			F.setZero();
 			F =  Lambda*( - kp*(x - x_d) - kv*dx);
+			// cout << "I am okay\n" << "\n";
 			cout << "\n F: " << robot->_q - qd << "\n";
 
 			// calculate command_torques
-			// command_torques.setZero();
+			command_torques.setZero();
 			// command_torques = Jv.transpose()*F + N.transpose()* ( - kpj*(robot->_q) - kvj*(robot->_dq) ) + g;
-			command_torques = robot->_M_inv*(- kp*(robot->_q - qd) - kv * robot->_dq) + h;
-			// command_torques = Jv.transpose()*F + h;
-			cout << "command torque: " << command_torques << "\n";
+			// command_torques = robot->_M_inv*(- kp*(robot->_q - qd) - kv * robot->_dq) + h
+			// command_torques << 0.001,0.0,0.0,0.0,0.0,0.0,0.0;
+			
+			command_torques = -10*( Kp.asDiagonal()*(robot->_q - qd) + Kv.asDiagonal() * robot->_dq) + h;
+			cout << "command torque:\n " << command_torques << "\n";
 
 		}
 		
@@ -224,7 +232,7 @@ int main(int argc, char const *argv[])
 
         // command_torques.setZero();
 		// send to redis
-		// redis_client.setEigenMatrixJSON(ROBOT_COMMAND_TORQUES_KEY, command_torques);
+		redis_client.setEigenMatrixJSON(ROBOT_COMMAND_TORQUES_KEY, command_torques);
 
 		controller_counter++;
 
