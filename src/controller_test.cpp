@@ -9,7 +9,7 @@
 #include <fstream>
 #include <string>
 
-#include "yamlLoader.hpp"
+// #include "yamlLoader.hpp"
 
 #define RAD(deg) ((double)(deg) * M_PI / 180.0)
 
@@ -59,7 +59,7 @@ int main(int argc, char const *argv[])
 	signal(SIGINT, &sighandler);
 
 	// load the yaml config file.
-	yamlLoader robotconfig("../src/config.yaml");
+	// yamlLoader robotconfig("../src/config.yaml");
 	// load robots
 	auto robot = new Sai2Model::Sai2Model(robot_file, false);
 	robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
@@ -100,8 +100,8 @@ int main(int argc, char const *argv[])
     controller_number = argv[1];
 
 	VectorXd Kp(dof),Kv(dof);
-	Kp = robotconfig.getKpV();
-	Kv = robotconfig.getKvV();
+	// Kp = robotconfig.getKpV();
+	// Kv = robotconfig.getKvV();
 	// create a timer
 	LoopTimer timer;
 	timer.initializeTimer();
@@ -177,8 +177,8 @@ int main(int argc, char const *argv[])
 
 			qd << 0.2, -0.236, 0.1, -1.57, 0.03, 1.57, 0.0;
 
-			double kp = robotconfig.getKp();
-			double kv = robotconfig.getKv();
+			double kp = 100;
+			double kv = 20;
 			double kpj = 50;
 			double kvj = 14;
 			// set target pos as x_d;
@@ -200,7 +200,7 @@ int main(int argc, char const *argv[])
 			robot->gravityVector(g);
 
 			// set x_d
-			x_d << 0.3 + 0.1*sin(M_PI*time), 0.1 + 0.1* cos(M_PI*time), 0.5 ;
+			// x_d << 0.3 + 0.1*sin(M_PI*time), 0.1 + 0.1* cos(M_PI*time), 0.5 ;
 
 			// calculate joint_task_torque
 			VectorXd h(dof);
@@ -212,15 +212,15 @@ int main(int argc, char const *argv[])
 			F.setZero();
 			F =  Lambda*( - kp*(x - x_d) - kv*dx);
 			// cout << "I am okay\n" << "\n";
-			cout << "\n F: " << robot->_q - qd << "\n";
+			cout << "\n F: " << F << "\n";
 
 			// calculate command_torques
 			command_torques.setZero();
 			// command_torques = Jv.transpose()*F + N.transpose()* ( - kpj*(robot->_q) - kvj*(robot->_dq) ) + g;
-			// command_torques = robot->_M_inv*(- kp*(robot->_q - qd) - kv * robot->_dq) + h
-			// command_torques << 0.001,0.0,0.0,0.0,0.0,0.0,0.0;
+			// command_torques = robot->_M*(- kp*(robot->_q - qd) - kv * robot->_dq);
+
 			
-			command_torques = -10*( Kp.asDiagonal()*(robot->_q - qd) + Kv.asDiagonal() * robot->_dq) + h;
+			command_torques = Jv.transpose()*F + h;
 			cout << "command torque:\n " << command_torques << "\n";
 
 		}

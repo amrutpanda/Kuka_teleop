@@ -121,6 +121,11 @@ Eigen::VectorXd yamlLoader::getKvV() {
     return v;
 }
 
+// std::string yamlLoader::GetParamStr(std::string param_name) {
+    
+
+// }
+
 yamlLoader::~yamlLoader()
 {
 

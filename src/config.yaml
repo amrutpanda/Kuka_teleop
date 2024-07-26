@@ -3,10 +3,10 @@ files:
    world_file: "../model/iiwa14/world.urdf"
    robot_file: "../model/iiwa14/iiwa14.urdf"
 robot:
-   kp: 0.05
-   kv: 0.01
-   kp_vector: 5,5,5,5,5,5,1
-   kv_vector: 1,1,1,1,1,1,0
+   kp: 1
+   kv: 1
+   kp_vector: 50,50,50,50,50,50,10
+   kv_vector: 5,5,5,5,5,5,0
    q_init: 0, -0.036, 0, -1.57, 0, 1.57, 0.0
    q_lower: -2.9655, -2.0933, -2.9655, -2.0933, -2.9655, -2.0933, -3.0527
    q_upper: 2.9655, 2.0933, 2.9655, 2.0933, 2.9655, 2.0933, 3.0527

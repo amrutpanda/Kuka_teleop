@@ -1,6 +1,7 @@
 #include <iostream>
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Core>
+#include "yamlLoader.hpp"
 
 using namespace std;
 using namespace Eigen;
