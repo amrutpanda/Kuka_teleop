@@ -1,145 +1,135 @@
 #include "yamlLoader.hpp"
 
-yamlLoader::yamlLoader(const std::string FilePath)
+yamlLoader::yamlLoader()
 {
-    mainNode = YAML::LoadFile(FilePath);
-}
-
-std::string yamlLoader::getWorldFilename() {
-    return mainNode["files"]["world_file"].as<std::string>();
-}
-
-std::string yamlLoader::getRobotFilename() {
-    return mainNode["files"]["robot_file"].as<std::string>();
-}
-
-float yamlLoader::getKp() {
-    YAML::Node tnode = mainNode["robot"];
-    return tnode["kp"].as<float>();
-}
-
-float yamlLoader::getKv() {
-    YAML::Node tnode = mainNode["robot"];
-    return tnode["kv"].as<float>();
-}
-
-Eigen::VectorXd yamlLoader::get_qlower() {
-    std::string exp = mainNode["robot"]["q_lower"].as<std::string>();
-    std::vector<double> values;
-    // create a stringstream.
-    std::stringstream ss(exp);
-    while (ss.good())
-    {
-        std::string substr;
-        getline(ss,substr,',');
-        values.push_back(std::stod(substr));
-
-    }
-    Eigen::VectorXd v(Eigen::Map<Eigen::VectorXd>(values.data(),values.size()));
-    return v;
-      
-}
-
-Eigen::VectorXd yamlLoader::get_qupper() {
-    std::string exp = mainNode["robot"]["q_upper"].as<std::string>();
-    std::vector<double> values;
-    // create a stringstream.
-    std::stringstream ss(exp);
-    while (ss.good())
-    {
-        std::string substr;
-        getline(ss,substr,',');
-        values.push_back(std::stod(substr));
-
-    }
-    Eigen::VectorXd v(Eigen::Map<Eigen::VectorXd>(values.data(),values.size()));
-    return v;
-      
-}
-
-Eigen::VectorXd yamlLoader::get_qinit() {
-    std::string exp = mainNode["robot"]["q_init"].as<std::string>();
-    std::vector<double> values;
-    // create a stringstream.
-    std::stringstream ss(exp);
-    while (ss.good())
-    {
-        std::string substr;
-        getline(ss,substr,',');
-        values.push_back(std::stod(substr));
-
-    }
-    Eigen::VectorXd v(Eigen::Map<Eigen::VectorXd>(values.data(),values.size()));
-    return v;
-      
-}
-
-void yamlLoader::strToEigen(std::string& str, char delimiter, Eigen::MatrixXd& mat ) {
-    // the matrix "mat" must have its rows and columns defined.
-    std::vector<double> values;
-    // create a stringstream.
-    std::stringstream ss(str);
-    while (ss.good())
-    {
-        std::string substr;
-        getline(ss,substr,delimiter);
-        values.push_back(std::stod(substr));
-    }
-
-    assert(("mismatch between matrix size and no. of delimiters\n" ,(mat.rows()*mat.cols()) == values.size()));
-    mat = Eigen::Map<Eigen::MatrixXd>(values.data(),mat.rows(),mat.cols());
 
 }
-
-void yamlLoader::strToEigenVector(std::string& str, char delimiter ,Eigen::VectorXd& v) {
-    std::vector<double> values;
-    // create a stringstream.
-    std::stringstream ss(str);
-    while (ss.good())
-    {
-        std::string substr;
-        getline(ss,substr,',');
-        values.push_back(std::stod(substr));
-
-    }
-    // Eigen::VectorXd v(Eigen::Map<Eigen::VectorXd>(values.data(),values.size()));
-    v.resize(values.size());
-    v = Eigen::Map<Eigen::VectorXd>(values.data(),values.size());
-}
-
-Eigen::VectorXd yamlLoader::getKpV() {
-    std::string exp = mainNode["robot"]["kp_vector"].as<std::string>();
-    Eigen::VectorXd v;
-    strToEigenVector(exp,',',v);
-    return v;
-}
-
-Eigen::VectorXd yamlLoader::getKvV() {
-    std::string exp = mainNode["robot"]["kv_vector"].as<std::string>();
-    Eigen::VectorXd v;
-    strToEigenVector(exp,',',v);
-    return v;
-}
-
-// std::string yamlLoader::GetParamStr(std::string param_name) {
-    
-
-// }
 
 yamlLoader::~yamlLoader()
 {
+}
 
+void yamlLoader::loadFile(std::string filename) {
+
+    try
+    {
+        std::ifstream input_file_stream;
+        input_file_stream.open(filename,std::ios::in);
+        std::stringstream ss;
+        ss << input_file_stream.rdbuf();
+        file_string = ss.str();
+        // load to mainNode.
+        mainNode = YAML::LoadFile(filename);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        std::runtime_error("Error while reading file: " + filename);
+    }
+    
+    
+}
+
+void yamlLoader::get_data_from_param(std::string param_string, std::string& strval) {
+
+    try
+    {
+        // split the param_string.
+        std::vector<std::string> container;
+        std::stringstream ss;
+        std::string substr;
+        ss << param_string;
+
+        while (ss.good())
+        {
+            getline(ss,substr,':');
+            container.push_back(substr);
+        }
+        
+        YAML::Node tnode,snode;
+        // tnode = mainNode;
+        tnode = YAML::Load(file_string);
+        // don't know why reading from file_stream does not work.
+        // tnode = YAML::LoadFile(Filename);
+        for (int i = 0; i < container.size(); i++)
+        {
+            snode = tnode[container[i]]; 
+            tnode = snode;
+        }
+        strval = tnode.as<std::string>();
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        std::runtime_error("Error while reading the values of param: " + param_string);
+    }
+    
 }
 
 
+std::string yamlLoader::GetParamStr(std::string param_name) {
+    std::string str;
+    get_data_from_param(param_name,str);
+    return str;
+}
 
-// int main(int argc, char const *argv[])
-// {
-//     yamlLoader loader("../src/config.yaml");
-//     Eigen::VectorXd vec;
-//     std::cout << loader.getRobotFilename() << "\n";
-//     vec = loader.get_qinit();
-//     std::cout << vec << "\n";
+int yamlLoader::GetParamInt(std::string param_name) {
+    std::string str;
+    get_data_from_param(param_name,str);
+    return std::stoi(str);
+}
 
-//     return 0;
-// }
+double yamlLoader::GetParamDouble(std::string param_name) {
+    std::string str;
+    get_data_from_param(param_name,str);
+    return std::stod(str);
+}
+
+void yamlLoader::GetParamEigenVector(std::string param_name, Eigen::VectorXd& v) {
+    std::string str;
+    std::string substr;
+    get_data_from_param(param_name,str);
+    std::vector<double> value;
+    std::stringstream ss;
+    ss << str;
+    while (ss.good())
+    {
+        getline(ss,substr,',');
+        value.push_back(std::stod(substr));
+    }
+    try
+    {
+        v = Eigen::Map<Eigen::VectorXd>(value.data(),value.size());      
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        std::runtime_error("Error while mapping to Eigen vector from param : " + param_name);
+    }
+    
+}
+
+void yamlLoader::GetParamEigenMatrix(std::string param_name, Eigen::MatrixXd& mat ) {
+    std::string str;
+    std::string substr;
+    get_data_from_param(param_name,str);
+    std::vector<double> value;
+    std::stringstream ss;
+    ss << str;
+    while (ss.good())
+    {
+        getline(ss,substr,',');
+        value.push_back(std::stod(substr));
+    }
+
+    try
+    {
+        mat = Eigen::Map<Eigen::MatrixXd>(value.data(),mat.rows(), mat.cols());
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        std::runtime_error("Error while mapping to Eigen matrix from param : " + param_name);
+    }
+    
+}

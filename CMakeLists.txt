@@ -9,8 +9,8 @@ LIST(APPEND CMAKE_PREFIX_PATH "/home/robotics/sai2/**")
 include_directories("/home/robotics/sai2/core/**")
 
 # imgui package related variable setup.
-set(IMGUI_DIR "/home/robotics/myfiles/cpp/MyProjects/imgui")
-# set(IMGUI_DIR "/home/ir/Files/libs/imgui")
+# set(IMGUI_DIR "/home/robotics/myfiles/cpp/MyProjects/imgui")
+set(IMGUI_DIR "/home/ir/Files/libs/imgui")
 set(IMGUI_SOURCES ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
                   ${IMGUI_DIR}/imgui.cpp ${IMGUI_DIR}/imgui_draw.cpp
 				  ${IMGUI_DIR}/imgui_demo.cpp ${IMGUI_DIR}/imgui_tables.cpp

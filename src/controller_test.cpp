@@ -9,7 +9,13 @@
 #include <fstream>
 #include <string>
 
-// #include "yamlLoader.hpp"
+#include "yamlLoader.hpp"
+
+
+// some helper functions.
+
+void computeTransfromFrames(Sai2Model::Sai2Model* robot_model, string sframe, string tframe,
+								Vector3d Translation,Matrix3d Rotation);
 
 #define RAD(deg) ((double)(deg) * M_PI / 180.0)
 
@@ -60,6 +66,8 @@ int main(int argc, char const *argv[])
 
 	// load the yaml config file.
 	// yamlLoader robotconfig("../src/config.yaml");
+	yamlLoader robotconfig;
+	robotconfig.loadFile("../src/config.yaml");
 	// load robots
 	auto robot = new Sai2Model::Sai2Model(robot_file, false);
 	robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
@@ -127,55 +135,7 @@ int main(int argc, char const *argv[])
 			VectorXd g(dof), joint_task_torque(dof), qd(dof);
 
 			qd << 0, -0.236, 0.1, -1.57, 0, 1.57, 0.0;
-
-			double kp = 100;
-			double kv = 20;
-			double kpj = 50;
-			double kvj = 14;
-			// set target pos as x_d;
-			x_d = target_pos;
-			// update Jv
-			MatrixXd Jv = MatrixXd::Zero(3,7);
-			robot->Jv(Jv,ee_link_name,pos_in_ee_link);
-			// update Lambda
-			MatrixXd Lambda = MatrixXd::Zero(3,3);
-			robot->taskInertiaMatrix(Lambda,Jv);
-			// update N
-			MatrixXd N = MatrixXd::Zero(7,7);
-			robot->nullspaceMatrix(N,Jv);
-			// update x
-			robot->position(x,ee_link_name,pos_in_ee_link);
-			// update dx
-			robot->linearVelocity(dx,ee_link_name,pos_in_ee_link);
-			// update g
-			robot->gravityVector(g);
-
-			// set x_d
-			x_d << 0.3 + 0.1*sin(M_PI*time), 0.1 + 0.1* cos(M_PI*time), 0.5 ;
-
-			// calculate joint_task_torque
-			VectorXd h(dof);
-			robot->coriolisPlusGravity(h);
-			joint_task_torque.setZero();
-			joint_task_torque = robot->_M * robot->_ddq + h;
-
-			// calculate F
-			F.setZero();
-			F =  Lambda*( - kp*(x - x_d) - kv*dx);
-			cout << "\n F: " << N << "\n";
-
-			// calculate command_torques
-			// command_torques.setZero();
-			// command_torques = Jv.transpose()*F + N.transpose()* ( - kpj*(robot->_q) - kvj*(robot->_dq) ) + g;
-			command_torques = robot->_M_inv*(-kp *(robot->_q - qd) - kv*(robot->_dq)) + h;
-			cout << "command torque: " << command_torques << "\n";
-
-		}
-		else if(controller_number == "2") {
-			Vector3d x, x_d, dx, F;
-			VectorXd g(dof), joint_task_torque(dof), qd(dof);
-
-			qd << 0.2, -0.236, 0.1, -1.57, 0.03, 1.57, 0.0;
+			
 
 			double kp = 100;
 			double kv = 20;
@@ -211,6 +171,56 @@ int main(int argc, char const *argv[])
 			// calculate F
 			F.setZero();
 			F =  Lambda*( - kp*(x - x_d) - kv*dx);
+			cout << "\n F: " << N << "\n";
+
+			// calculate command_torques
+			// command_torques.setZero();
+			// command_torques = Jv.transpose()*F + N.transpose()* ( - kpj*(robot->_q) - kvj*(robot->_dq) ) + g;
+			command_torques = robot->_M_inv*(-kp *(robot->_q - qd) - kv*(robot->_dq)) + h;
+			cout << "command torque: " << command_torques << "\n";
+
+		}
+		else if(controller_number == "2") {
+			Vector3d x, x_d, dx, F;
+			VectorXd g(dof), joint_task_torque(dof), qd(dof),qd_dot(dof);
+
+			qd << 0.2, -0.236, 0.1, -1.57, 0.03, 1.57, 0.0;
+			qd_dot << 0.01, 0.0, 0.01,0.0, 0.0, 0.0, 0.0;
+
+			double kp = robotconfig.GetParamDouble("robot:kp");
+			double kv = robotconfig.GetParamDouble("robot:kv");
+			double kpj = 50;
+			double kvj = 14;
+			// set target pos as x_d;
+			x_d = target_pos;
+			// update Jv
+			MatrixXd Jv = MatrixXd::Zero(3,7);
+			robot->Jv(Jv,ee_link_name,pos_in_ee_link);
+			// update Lambda
+			MatrixXd Lambda = MatrixXd::Zero(3,3);
+			robot->taskInertiaMatrix(Lambda,Jv);
+			// update N
+			MatrixXd N = MatrixXd::Zero(7,7);
+			robot->nullspaceMatrix(N,Jv);
+			// update x
+			robot->position(x,ee_link_name,pos_in_ee_link);
+			// update dx
+			robot->linearVelocity(dx,ee_link_name,pos_in_ee_link);
+			// update g
+			robot->gravityVector(g);
+
+			// set x_d
+			x_d << 0.3 + 0.1*sin(M_PI*time), 0.1 + 0.1* cos(M_PI*time), 0.5 ;
+
+			// calculate joint_task_torque
+			VectorXd h(dof);
+			robot->coriolisPlusGravity(h);
+			joint_task_torque.setZero();
+			joint_task_torque = robot->_M * robot->_ddq + h;
+
+			// calculate F
+			F.setZero();
+			F =  Lambda*( - kp*(x - x_d) - kv*dx);
 			// cout << "I am okay\n" << "\n";
 			cout << "\n F: " << F << "\n";
 
@@ -218,8 +228,8 @@ int main(int argc, char const *argv[])
 			command_torques.setZero();
 			// command_torques = Jv.transpose()*F + N.transpose()* ( - kpj*(robot->_q) - kvj*(robot->_dq) ) + g;
 			// command_torques = robot->_M*(- kp*(robot->_q - qd) - kv * robot->_dq);
+			// command_torques = robot->_M*(-kp*(robot->_dq - qd_dot)) + h;
 
-			
 			command_torques = Jv.transpose()*F + h;
 			cout << "command torque:\n " << command_torques << "\n";
 
@@ -251,3 +261,18 @@ int main(int argc, char const *argv[])
     return 0;
 }
 
+
+
+void computeTransfromFrames(Sai2Model::Sai2Model* robot_model, 
+							string sframe, string tframe,
+							Vector3d Translation,Matrix3d Rotation) 
+{
+	Affine3d s_a, t_a, A;
+	robot_model->transform(s_a,sframe);
+	robot_model->transform(t_a,tframe);
+	Matrix4d T;
+	T = s_a.matrix().inverse()*t_a.matrix();
+	A = T;
+	Translation = A.translation();
+	Rotation = A.rotation();
+}
