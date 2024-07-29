@@ -12,6 +12,15 @@
 #include "yamlLoader.hpp"
 
 
+double sat(double x) {
+	if (abs(x) <= 1.0) {
+		return x;
+	}
+	else {
+		return signbit(x);
+	}
+}
+
 // some helper functions.
 
 void computeTransfromFrames(Sai2Model::Sai2Model* robot_model, string sframe, string tframe,
@@ -42,15 +51,6 @@ string ROBOT_SENSED_FORCE_KEY = "sai2::dual_proxy::simviz::sensors::sensed_force
 unsigned long long controller_counter = 0;
 
 // helper function 
-double sat(double x) {
-	if (abs(x) <= 1.0) {
-		return x;
-	}
-	else {
-		return signbit(x);
-	}
-}
-
 
 int main(int argc, char const *argv[])
 {
@@ -81,7 +81,7 @@ int main(int argc, char const *argv[])
 	VectorXd command_torques = VectorXd::Zero(dof);
 
 	// target pos;
-	Vector3d target_pos = Vector3d(0.35,-0.004,0.5);
+	Vector3d target_pos = Vector3d(-0.6,0.3,0.5);
 
 	// model quantities for operational space control
 	MatrixXd Jv = MatrixXd::Zero(3,dof);
@@ -181,7 +181,7 @@ int main(int argc, char const *argv[])
 
 		}
 		else if(controller_number == "2") {
-			Vector3d x, x_d, dx, F;
+			Vector3d x, x_d, dx, F,dx_d;
 			VectorXd g(dof), joint_task_torque(dof), qd(dof),qd_dot(dof);
 
 			qd << 0.2, -0.236, 0.1, -1.57, 0.03, 1.57, 0.0;
@@ -210,7 +210,7 @@ int main(int argc, char const *argv[])
 			robot->gravityVector(g);
 
 			// set x_d
-			x_d << 0.3 + 0.1*sin(M_PI*time), 0.1 + 0.1* cos(M_PI*time), 0.5 ;
+			// x_d << 0.3 + 0.1*sin(M_PI*time), 0.1 + 0.1* cos(M_PI*time), 0.5 ;
 
 			// calculate joint_task_torque
 			VectorXd h(dof);
@@ -220,8 +220,14 @@ int main(int argc, char const *argv[])
 
 			// calculate F
 			F.setZero();
-			F =  Lambda*( - kp*(x - x_d) - kv*dx);
-			// cout << "I am okay\n" << "\n";
+			// F =  Lambda*( - kp*(x - x_d) - kv*dx);
+			// impedance control.
+			// F = -kp*(x-x_d) - kv*dx;
+
+			// velocity saturation.
+			dx_d = (kp/kv) * ( x_d - x );
+			double v = sat(0.1 / dx_d.norm());
+			F = Lambda* ( -kv*(dx - v *dx_d) );
 			cout << "\n F: " << F << "\n";
 
 			// calculate command_torques
