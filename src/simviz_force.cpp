@@ -57,6 +57,8 @@ void imgui_init_setup(GLFWwindow* window);
 void imgui_init_frame();
 void imgui_render();
 void imgui_cleanup();
+// trip command torque;
+void command_trunc(VectorXd& v);
 
 // simulation function prototype
 void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim, Sai2Graphics::Sai2Graphics* graphics);
@@ -91,7 +93,7 @@ int main() {
 	signal(SIGTERM, &sighandler);
 	signal(SIGINT, &sighandler);
 	// load config file.
-	yamlLoader robotconfig("../src/config.yaml");
+	// yamlLoader robotconfig("../src/config.yaml");
 	
 	// load graphics scene
 	auto graphics = new Sai2Graphics::Sai2Graphics(world_file, true);
@@ -105,19 +107,21 @@ int main() {
 	robot->updateKinematics();
 
 	// set initial position.
-	// VectorXd q_init = VectorXd(0.01, 1.02, -0.7, 1.57, -0.35, 1.3, 3.2);
 	VectorXd q_init(7);
-	// q_init << 1.01, -1.02, 1.7, 1.57, -0.35, 1.3, 1.03;
-	q_init = robotconfig.get_qinit();
-	robot->_q = q_init;
-	robot->updateKinematics();
-	cout << "q: " <<robot->_q << "\n";
+	// q_init = robotconfig.get_qinit();
+	q_init << 0, -0.036, 0, -1.57, 0, 1.57, 0.0;
+	robot->updateModel();
 
 	// load simulation world
 	auto sim = new Simulation::Sai2Simulation(world_file, false);
+	// sim->setCollisionRestitution(0);
+	// sim->setCoeffFrictionStatic(0.4);
+	// sim->setCoeffFrictionDynamic(0.02);
+
 	sim->setCollisionRestitution(0);
-	sim->setCoeffFrictionStatic(0.4);
+	sim->setCoeffFrictionStatic(0.3);
 	sim->setCoeffFrictionDynamic(0.02);
+
 	sim->setJointPositions(robot_name,q_init); // set q_init as the default pose.
 
 	// read joint positions, velocities, update model
@@ -293,28 +297,33 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim, Sa
 
 	while (fSimulationRunning) {
 		fTimerDidSleep = timer.waitForNextLoop();
-		robot->gravityVector(gravity);
 
+		if (redis_client.get(CONTROLLER_RUNNING_KEY) == "1"){
+			gravity.setZero();
+		}
+		else {
+			robot->gravityVector(gravity);
+			// robot->coriolisPlusGravity(gravity);
+		}
 		// read arm torques from redis
 		command_torques = redis_client.getEigenMatrixJSON(ROBOT_COMMAND_TORQUES_KEY);
 
-		// if (redis_client.get(CONTROLLER_RUNNING_KEY) == "1"){
-		// 	// set torques to simulation
-		// 	sim->setJointTorques(robot_name, command_torques + gravity);
-		// 	// sim->setJointTorques(robot_name,command_torques);
-		// 	// integrate forward
-		// 	// double curr_time = timer.elapsedTime();
-		// 	// double loop_dt = curr_time - last_time; 
-		// 	sim->integrate(0.001);
-		// }
+		// joint damping.
+		VectorXd damped_torque(dof);
+		VectorXd damping_ratio(dof);
+		damped_torque = -1.5* robot->_dq;
+		// cout << "damping_torque:\n" << damped_torque << "\nqdot: \n"<< robot->_dq << "\n";
+		if (abs(damped_torque.any()) > 1000)
+			exit(0);
 
-		sim->setJointTorques(robot_name,command_torques+gravity);
+		sim->setJointTorques(robot_name,command_torques + gravity + damped_torque);
 		sim->integrate(0.001);
+
 
 		// read joint positions, velocities, update model
 		sim->getJointPositions(robot_name, robot->_q);
 		sim->getJointVelocities(robot_name, robot->_dq);
-		robot->updateKinematics();
+		// robot->updateKinematics();
 		robot->updateModel();
 
 		// get ee_pose.
@@ -322,6 +331,7 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim, Sa
 		Matrix3d robot_ori;
 		robot->position(robot_pos,"link7",Vector3d(0, 0, 0.0815));
 		robot->rotation(robot_ori,"link7");
+
 		// update force sensor and display
 		force_sensor->update(sim);
 		force_sensor->getForce(force);

@@ -11,6 +11,21 @@
 
 #include "yamlLoader.hpp"
 
+
+double sat(double x) {
+	if (abs(x) <= 1.0) {
+		return x;
+	}
+	else {
+		return signbit(x);
+	}
+}
+
+// some helper functions.
+
+void computeTransfromFrames(Sai2Model::Sai2Model* robot_model, string sframe, string tframe,
+								Vector3d Translation,Matrix3d Rotation);
+
 #define RAD(deg) ((double)(deg) * M_PI / 180.0)
 
 // handle ctrl-c nicely
@@ -36,15 +51,6 @@ string ROBOT_SENSED_FORCE_KEY = "sai2::dual_proxy::simviz::sensors::sensed_force
 unsigned long long controller_counter = 0;
 
 // helper function 
-double sat(double x) {
-	if (abs(x) <= 1.0) {
-		return x;
-	}
-	else {
-		return signbit(x);
-	}
-}
-
 
 int main(int argc, char const *argv[])
 {
@@ -59,7 +65,9 @@ int main(int argc, char const *argv[])
 	signal(SIGINT, &sighandler);
 
 	// load the yaml config file.
-	yamlLoader robotconfig("../src/config.yaml");
+	// yamlLoader robotconfig("../src/config.yaml");
+	yamlLoader robotconfig;
+	robotconfig.loadFile("../src/config.yaml");
 	// load robots
 	auto robot = new Sai2Model::Sai2Model(robot_file, false);
 	robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
@@ -73,7 +81,7 @@ int main(int argc, char const *argv[])
 	VectorXd command_torques = VectorXd::Zero(dof);
 
 	// target pos;
-	Vector3d target_pos = Vector3d(0.35,-0.004,0.5);
+	Vector3d target_pos = Vector3d(-0.6,0.3,0.5);
 
 	// model quantities for operational space control
 	MatrixXd Jv = MatrixXd::Zero(3,dof);
@@ -99,6 +107,9 @@ int main(int argc, char const *argv[])
     }
     controller_number = argv[1];
 
+	VectorXd Kp(dof),Kv(dof);
+	// Kp = robotconfig.getKpV();
+	// Kv = robotconfig.getKvV();
 	// create a timer
 	LoopTimer timer;
 	timer.initializeTimer();
@@ -121,7 +132,10 @@ int main(int argc, char const *argv[])
         if(controller_number == "1")
 		{
 			Vector3d x, x_d, dx, F;
-			VectorXd g(dof), joint_task_torque(dof);
+			VectorXd g(dof), joint_task_torque(dof), qd(dof);
+
+			qd << 0, -0.236, 0.1, -1.57, 0, 1.57, 0.0;
+			
 
 			double kp = 100;
 			double kv = 20;
@@ -146,7 +160,7 @@ int main(int argc, char const *argv[])
 			robot->gravityVector(g);
 
 			// set x_d
-			x_d << 0.3 + 0.1*sin(M_PI*time), 0.1 + 0.1* cos(M_PI*time), 0.5 ;
+			// x_d << 0.3 + 0.1*sin(M_PI*time), 0.1 + 0.1* cos(M_PI*time), 0.5 ;
 
 			// calculate joint_task_torque
 			VectorXd h(dof);
@@ -162,18 +176,19 @@ int main(int argc, char const *argv[])
 			// calculate command_torques
 			// command_torques.setZero();
 			// command_torques = Jv.transpose()*F + N.transpose()* ( - kpj*(robot->_q) - kvj*(robot->_dq) ) + g;
-			command_torques = Jv.transpose()*F + h;
+			command_torques = robot->_M_inv*(-kp *(robot->_q - qd) - kv*(robot->_dq)) + h;
 			cout << "command torque: " << command_torques << "\n";
 
 		}
 		else if(controller_number == "2") {
-			Vector3d x, x_d, dx, F;
-			VectorXd g(dof), joint_task_torque(dof), qd(dof);
+			Vector3d x, x_d, dx, F,dx_d;
+			VectorXd g(dof), joint_task_torque(dof), qd(dof),qd_dot(dof);
 
 			qd << 0.2, -0.236, 0.1, -1.57, 0.03, 1.57, 0.0;
-	
-			double kp = robotconfig.getKp();
-			double kv = robotconfig.getKv();
+			qd_dot << 0.01, 0.0, 0.01,0.0, 0.0, 0.0, 0.0;
+
+			double kp = robotconfig.GetParamDouble("robot:kp");
+			double kv = robotconfig.GetParamDouble("robot:kv");
 			double kpj = 50;
 			double kvj = 14;
 			// set target pos as x_d;
@@ -195,7 +210,7 @@ int main(int argc, char const *argv[])
 			robot->gravityVector(g);
 
 			// set x_d
-			x_d << 0.3 + 0.1*sin(M_PI*time), 0.1 + 0.1* cos(M_PI*time), 0.5 ;
+			// x_d << 0.3 + 0.1*sin(M_PI*time), 0.1 + 0.1* cos(M_PI*time), 0.5 ;
 
 			// calculate joint_task_torque
 			VectorXd h(dof);
@@ -205,15 +220,24 @@ int main(int argc, char const *argv[])
 
 			// calculate F
 			F.setZero();
-			F =  Lambda*( - kp*(x - x_d) - kv*dx);
-			cout << "\n F: " << robot->_q - qd << "\n";
+			// F =  Lambda*( - kp*(x - x_d) - kv*dx);
+			// impedance control.
+			// F = -kp*(x-x_d) - kv*dx;
+
+			// velocity saturation.
+			dx_d = (kp/kv) * ( x_d - x );
+			double v = sat(0.1 / dx_d.norm());
+			F = Lambda* ( -kv*(dx - v *dx_d) );
+			cout << "\n F: " << F << "\n";
 
 			// calculate command_torques
-			// command_torques.setZero();
+			command_torques.setZero();
 			// command_torques = Jv.transpose()*F + N.transpose()* ( - kpj*(robot->_q) - kvj*(robot->_dq) ) + g;
-			command_torques = robot->_M_inv*(- kp*(robot->_q - qd) - kv * robot->_dq) + h;
-			// command_torques = Jv.transpose()*F + h;
-			cout << "command torque: " << command_torques << "\n";
+			// command_torques = robot->_M*(- kp*(robot->_q - qd) - kv * robot->_dq);
+			// command_torques = robot->_M*(-kp*(robot->_dq - qd_dot)) + h;
+
+			command_torques = Jv.transpose()*F + h;
+			cout << "command torque:\n " << command_torques << "\n";
 
 		}
 		
@@ -224,7 +248,7 @@ int main(int argc, char const *argv[])
 
         // command_torques.setZero();
 		// send to redis
-		// redis_client.setEigenMatrixJSON(ROBOT_COMMAND_TORQUES_KEY, command_torques);
+		redis_client.setEigenMatrixJSON(ROBOT_COMMAND_TORQUES_KEY, command_torques);
 
 		controller_counter++;
 
@@ -243,3 +267,18 @@ int main(int argc, char const *argv[])
     return 0;
 }
 
+
+
+void computeTransfromFrames(Sai2Model::Sai2Model* robot_model, 
+							string sframe, string tframe,
+							Vector3d Translation,Matrix3d Rotation) 
+{
+	Affine3d s_a, t_a, A;
+	robot_model->transform(s_a,sframe);
+	robot_model->transform(t_a,tframe);
+	Matrix4d T;
+	T = s_a.matrix().inverse()*t_a.matrix();
+	A = T;
+	Translation = A.translation();
+	Rotation = A.rotation();
+}
